@@ -11,7 +11,8 @@ A powerful AI-based math solver built using Python and Streamlit.
 - Smart input (2x → 2*x)
 
 ## 🌐 Live Demo
-Coming soon...
+https://math-ai-solver.streamlit.app
+
 
 ## 🛠️ Tech Used
 - Python
