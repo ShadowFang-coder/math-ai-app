@@ -3,231 +3,155 @@ import sympy as sp
 import numpy as np
 import matplotlib.pyplot as plt
 import re
-import math
 
-x = sp.symbols('x')
+st.set_page_config(page_title="Ultimate Quantum Math AI", layout="wide")
 
-# -------- SESSION MEMORY --------
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-if "selected_query" not in st.session_state:
-    st.session_state.selected_query = ""
-
-# -------- SEO --------
-st.set_page_config(
-    page_title="Free Math Solver with Steps | Ultimate Math AI",
-    page_icon="⚡",
-    layout="wide"
-)
-
-# -------- UI --------
+# ---------- STYLING ----------
 st.markdown("""
 <style>
-body { background-color: #0f172a; }
-.big-title { font-size: 42px; font-weight: 800; color: #38bdf8; }
-.subtitle { font-size: 18px; color: #94a3b8; margin-bottom: 20px; }
-.card {
-    background: rgba(255,255,255,0.05);
-    padding: 20px;
-    border-radius: 15px;
-    backdrop-filter: blur(10px);
-    margin-bottom: 20px;
-}
-.stButton>button {
-    background: linear-gradient(90deg,#38bdf8,#0ea5e9);
-    color: white;
-    border-radius: 10px;
+body {background-color: #0e1117;}
+.big-title {
+    text-align:center;
+    font-size:40px;
+    font-weight:bold;
+    color:#4FC3F7;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# -------- HERO --------
-st.markdown('<div class="big-title">⚡ Ultimate Math AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Solve. Visualize. Learn. Like a Pro 🚀</div>', unsafe_allow_html=True)
+st.markdown('<div class="big-title">🚀 Ultimate Quantum Math AI</div>', unsafe_allow_html=True)
 
-# -------- SMART INPUT --------
-def smart_input(expr):
+# ---------- SIDEBAR ----------
+st.sidebar.title("Navigate")
+page = st.sidebar.radio("", ["🧮 Solver", "📈 Graph", "📊 Logarithm", "📐 Trigonometry"])
+
+# ---------- INPUT PREPROCESS ----------
+def preprocess(expr):
     expr = expr.replace("^", "**")
     expr = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', expr)
-    expr = re.sub(r'(\d)\(', r'\1*(', expr)
-    expr = re.sub(r'(sin|cos|tan)(\d+)', r'\1(\2)', expr)
     return expr
 
-# -------- SIDEBAR --------
-st.sidebar.title("🧠 History")
+# ---------- ALGEBRA SOLVER ----------
+def solve_linear(equation):
+    x = sp.symbols('x')
+    equation = preprocess(equation)
 
-for i, item in enumerate(st.session_state.history[::-1]):
-    if st.sidebar.button(item["query"], key=i):
-        st.session_state.selected_query = item["query"]
+    if "=" not in equation:
+        return ["Invalid equation"], None
 
-section = st.sidebar.radio("Navigate", [
-    "🧮 Solver",
-    "📊 Graph",
-    "📘 Logarithm",
-    "📐 Trigonometry"
-])
+    lhs, rhs = equation.split("=")
+    lhs = sp.sympify(lhs)
+    rhs = sp.sympify(rhs)
 
-# -------- SOLVER --------
-if section == "🧮 Solver":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    steps = []
+    steps.append(f"{lhs} = {rhs}")
 
-    st.subheader("Algebra Solver")
+    expr = sp.expand(lhs - rhs)
+    a = expr.coeff(x)
+    b = expr.subs(x, 0)
 
-    default_val = st.session_state.selected_query
+    if b != 0:
+        steps.append(f"Move constant → {a}x = {-b}")
 
-    user_input = st.text_input(
-        "Enter your problem:",
-        value=default_val,
-        placeholder="Try: 2x + 5 = 15  OR  2(x+3)=10  OR  x^2+4x+4=0"
-    )
+    if a != 0:
+        result = float(-b / a)
+        steps.append(f"Divide by {a} → x = {result}")
+        return steps, result
+
+    return ["No solution"], None
+
+# ---------- SOLVER PAGE ----------
+if page == "🧮 Solver":
+    st.header("Algebra Solver")
+
+    st.caption("Try: 2x + 5 = 15, 10x - 10 = 20")
+
+    eq = st.text_input("Enter equation:")
 
     if st.button("Solve"):
         try:
-            expr = smart_input(user_input)
+            steps, ans = solve_linear(eq)
 
-            if "=" in expr:
-                l, r = expr.split("=")
+            st.subheader("🧠 Steps")
+            for i, s in enumerate(steps, 1):
+                st.write(f"{i}. {s}")
 
-                left = sp.sympify(l)
-                right = sp.sympify(r)
+            if ans is not None:
+                st.success(f"✅ Final Answer: x = {ans}")
 
-                eq = sp.Eq(left, right)
-                sol = sp.solve(eq, x)
+        except Exception as e:
+            st.error(e)
 
-                result = f"x = {sol}"
+# ---------- GRAPH PAGE ----------
+elif page == "📈 Graph":
+    st.header("Graph Plotter")
 
-                st.markdown(f"""
-### 🧠 Steps
+    st.caption("Try: x**2, sin(x), 2*x+1")
 
-1. {left} = {right}  
-2. Convert into equation form  
-3. Solve using algebra  
+    expr = st.text_input("Enter function (in x):")
 
-### ✅ Final Answer: {result}
-""")
-            else:
-                exp = sp.sympify(expr)
-                result = str(sp.simplify(exp))
-                st.success(result)
-
-            # SAVE HISTORY
-            st.session_state.history.append({
-                "query": user_input,
-                "result": result
-            })
-
-        except:
-            st.error("Invalid input. Try formats like 2x+5=10 or x^2+4x=0")
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# -------- GRAPH --------
-elif section == "📊 Graph":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    st.subheader("Graph Plotter")
-
-    expr_input = st.text_input(
-        "Enter function:",
-        placeholder="Try: x^2, sin(x), x^3 - 2x"
-    )
-
-    if st.button("Plot Graph"):
+    if st.button("Plot"):
         try:
-            expr = sp.sympify(smart_input(expr_input))
-            f = sp.lambdify(x, expr)
+            x = sp.symbols('x')
+            expr = preprocess(expr)
+            f = sp.lambdify(x, sp.sympify(expr), "numpy")
 
-            xv = np.linspace(-10, 10, 400)
-            yv = f(xv)
+            xs = np.linspace(-10, 10, 400)
+            ys = f(xs)
 
             fig, ax = plt.subplots()
-            ax.plot(xv, yv)
-            ax.grid()
+            fig.patch.set_facecolor('#0e1117')
+            ax.set_facecolor('#0e1117')
+
+            ax.plot(xs, ys)
+            ax.grid(True)
 
             st.pyplot(fig)
 
-            st.session_state.history.append({
-                "query": expr_input,
-                "result": "Graph plotted"
-            })
+        except Exception as e:
+            st.error(e)
 
-        except:
-            st.error("Invalid function")
+# ---------- LOG PAGE ----------
+elif page == "📊 Logarithm":
+    st.header("Logarithm Solver")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.caption("Try: log(100,10), log(8,2)")
 
-# -------- LOG --------
-elif section == "📘 Logarithm":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    st.subheader("Log Calculator")
-
-    expr = st.text_input(
-        "Enter log:",
-        placeholder="Try: log(10), log(100,10), ln(5)"
-    )
+    expr = st.text_input("Enter log expression:")
 
     if st.button("Calculate"):
         try:
-            val = eval(expr.replace("log", "math.log").replace("ln", "math.log"))
-            st.success(val)
+            expr = preprocess(expr)
+            result = float(sp.sympify(expr))
+            st.success(f"Answer: {result}")
+        except Exception as e:
+            st.error(e)
 
-            st.session_state.history.append({
-                "query": expr,
-                "result": val
-            })
+# ---------- TRIG PAGE ----------
+elif page == "📐 Trigonometry":
+    st.header("Trigonometry")
 
-        except:
-            st.error("Invalid log format")
+    st.caption("Try: sin(30), cos(60), tan(45)")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    expr = st.text_input("Enter trig expression:")
 
-# -------- TRIG --------
-elif section == "📐 Trigonometry":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    st.subheader("Trigonometry Solver")
-
-    expr = st.text_input(
-        "Enter trig:",
-        placeholder="Try: sin30, cos60, tan45"
-    )
-
-    if st.button("Calculate"):
+    if st.button("Solve Trig"):
         try:
-            expr = smart_input(expr)
-            match = re.match(r'(sin|cos|tan)\((\d+)\)', expr)
+            expr = preprocess(expr)
 
-            if not match:
-                st.error("Use: sin30, cos60, tan45")
-            else:
-                func, angle = match.group(1), int(match.group(2))
+            # Convert degrees to radians
+            expr = expr.replace("sin(", "sin(pi/180*")
+            expr = expr.replace("cos(", "cos(pi/180*")
+            expr = expr.replace("tan(", "tan(pi/180*")
 
-                values = {
-                    "sin": {30:"1/2",45:"1/√2",60:"√3/2"},
-                    "cos": {30:"√3/2",45:"1/√2",60:"1/2"},
-                    "tan": {30:"1/√3",45:"1",60:"√3"}
-                }
+            result = float(sp.N(sp.sympify(expr)))
 
-                result = values[func][angle]
+            st.subheader("🧠 Steps")
+            st.write("1. Convert degrees to radians")
+            st.write("2. Apply trigonometric function")
+            st.write("3. Compute value")
 
-                st.markdown(f"""
-### 🧠 Steps
+            st.success(f"Answer: {result}")
 
-1. {func}({angle}°)  
-2. Convert to radians  
-3. Apply identity  
-
-### ✅ Final Answer: {result}
-""")
-
-                st.session_state.history.append({
-                    "query": expr,
-                    "result": result
-                })
-
-        except:
-            st.error("Invalid trig input")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+        except Exception as e:
+            st.error(e)
